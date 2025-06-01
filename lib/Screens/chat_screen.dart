@@ -57,7 +57,7 @@ class _ChatScreenState extends State<ChatScreen> {
       http.Response response;
 
       if (_selectedImage != null && message.isNotEmpty) {
-        final uri = Uri.parse('http://192.168.1.251:8000/multimodal');
+        final uri = Uri.parse('http://192.168.1.116:8000/multimodal');
         final request = http.MultipartRequest('POST', uri);
         request.headers['Authorization'] = 'Bearer $token';
         request.fields['text'] = '<image> $message';
@@ -68,7 +68,7 @@ class _ChatScreenState extends State<ChatScreen> {
         final body = await streamed.stream.bytesToString();
         response = http.Response(body, streamed.statusCode);
       } else if (_selectedImage != null) {
-        final uri = Uri.parse('http://192.168.1.251:8000/image');
+        final uri = Uri.parse('http://192.168.1.116:8000/image');
         final request = http.MultipartRequest('POST', uri);
         request.headers['Authorization'] = 'Bearer $token';
         request.files.add(
@@ -78,7 +78,7 @@ class _ChatScreenState extends State<ChatScreen> {
         final body = await streamed.stream.bytesToString();
         response = http.Response(body, streamed.statusCode);
       } else {
-        final uri = Uri.parse('http://192.168.1.251:8000/query');
+        final uri = Uri.parse('http://192.168.1.116:8000/query');
         response = await http.post(
           uri,
           headers: {
