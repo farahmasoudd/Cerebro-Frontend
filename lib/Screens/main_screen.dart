@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:logging/logging.dart';
@@ -29,72 +30,108 @@ class MainAppState extends State<MainApp>
     required List<int> imageBytes,
     String fileName = 'image.jpg',
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access_token') ?? '';
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token') ?? '';
 
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$_apiEndpoint/image'),
-    );
-    request.headers['Authorization'] = 'Bearer $token';
+      if (token.isEmpty) {
+        throw Exception('No authentication token found');
+      }
 
-    final multipartFile = http.MultipartFile.fromBytes(
-      'image',
-      imageBytes,
-      filename: fileName,
-      contentType: MediaType('image', 'jpeg'),
-    );
-    request.files.add(multipartFile);
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Image API call returned status ${response.statusCode}: ${response.body}',
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_apiEndpoint/image'),
       );
-    }
+      request.headers['Authorization'] = 'Bearer $token';
+      request.headers['Content-Type'] = 'multipart/form-data';
 
-    return response.body;
+      final multipartFile = http.MultipartFile.fromBytes(
+        'file', // Changed from 'image' to 'file' to match backend
+        imageBytes,
+        filename: fileName,
+        contentType: MediaType('image', 'jpeg'),
+      );
+      request.files.add(multipartFile);
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      _log.info('Image API response status: ${response.statusCode}');
+      _log.info('Image API response body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Image API call failed with status ${response.statusCode}: ${response.body}',
+        );
+      }
+
+      // Parse JSON response
+      final jsonResponse = json.decode(response.body);
+      return jsonResponse['response'] ?? 'No response received';
+    } catch (e) {
+      _log.severe('Error in processImage: $e');
+      rethrow;
+    }
   }
 
   Future<String> processAudio({
     required List<int> audioBytes,
     String fileName = 'audio.wav',
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access_token') ?? '';
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString('access_token') ?? '';
 
-    final request = http.MultipartRequest(
-      'POST',
-      Uri.parse('$_apiEndpoint/voice'),
-    );
-    request.headers['Authorization'] = 'Bearer $token';
+      if (token.isEmpty) {
+        throw Exception('No authentication token found');
+      }
 
-    final multipartFile = http.MultipartFile.fromBytes(
-      'audio',
-      audioBytes,
-      filename: fileName,
-      contentType: MediaType('audio', 'wav'),
-    );
-    request.files.add(multipartFile);
-
-    final streamedResponse = await request.send();
-    final response = await http.Response.fromStream(streamedResponse);
-
-    if (response.statusCode != 200) {
-      throw Exception(
-        'Audio API call returned status ${response.statusCode}: ${response.body}',
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$_apiEndpoint/voice'),
       );
-    }
+      request.headers['Authorization'] = 'Bearer $token';
+      request.headers['Content-Type'] = 'multipart/form-data';
 
-    return response.body;
+      final multipartFile = http.MultipartFile.fromBytes(
+        'file', // Changed from 'audio' to 'file' to match backend
+        audioBytes,
+        filename: fileName,
+        contentType: MediaType('audio', 'wav'),
+      );
+      request.files.add(multipartFile);
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      _log.info('Audio API response status: ${response.statusCode}');
+      _log.info('Audio API response body: ${response.body}');
+
+      if (response.statusCode != 200) {
+        throw Exception(
+          'Audio API call failed with status ${response.statusCode}: ${response.body}',
+        );
+      }
+
+      // Parse JSON response
+      final jsonResponse = json.decode(response.body);
+      final transcription = jsonResponse['transcription'] ?? '';
+      final aiResponse = jsonResponse['response'] ?? '';
+
+      return 'Transcription: $transcription\n\nResponse: $aiResponse';
+    } catch (e) {
+      _log.severe('Error in processAudio: $e');
+      rethrow;
+    }
   }
 
   static const String _apiEndpoint = 'http://192.168.1.251:8000';
+
   // Audio Recording State
   StreamSubscription<Uint8List>? audioClipStreamSubs;
   bool _isRecordingAudio = false;
+  List<Uint8List> _audioChunks = [];
+  Timer? _recordingTimer;
 
   // Vision Processing State
   bool _isProcessingImage = false;
@@ -126,11 +163,12 @@ class MainAppState extends State<MainApp>
   void dispose() {
     audioClipStreamSubs?.cancel();
     _clearTimer?.cancel();
+    _recordingTimer?.cancel();
     super.dispose();
   }
 
   Future<void> asyncInit() async {
-    tryScanAndConnectAndStart(andRun: false);
+    await tryScanAndConnectAndStart(andRun: false);
   }
 
   Future<void> toggleConnection() async {
@@ -145,10 +183,17 @@ class MainAppState extends State<MainApp>
   }
 
   Future<void> _connectToFrame() async {
-    await tryScanAndConnectAndStart(andRun: true);
-    setState(() {
-      isConnected = currentState == ApplicationState.connected;
-    });
+    try {
+      await tryScanAndConnectAndStart(andRun: true);
+      setState(() {
+        isConnected = currentState == ApplicationState.connected;
+      });
+    } catch (e) {
+      _log.severe('Error connecting to frame: $e');
+      setState(() {
+        isConnected = false;
+      });
+    }
   }
 
   @override
@@ -158,12 +203,25 @@ class MainAppState extends State<MainApp>
     });
 
     await audioClipStreamSubs?.cancel();
-    audioClipStreamSubs = RxAudio().attach(frame!.dataResponse).listen((
-      audioData,
-    ) {
-      _log.info('Audio clip received: ${audioData.length} bytes');
-      _processAudioData(audioData);
-    });
+    audioClipStreamSubs = RxAudio()
+        .attach(frame!.dataResponse)
+        .listen(
+          (audioData) {
+            _log.info('Audio clip received: ${audioData.length} bytes');
+            _handleAudioChunk(audioData);
+          },
+          onError: (error) {
+            _log.severe('Audio stream error: $error');
+            _handleAudioError(error);
+          },
+          onDone: () {
+            _log.info('Audio stream completed');
+            _handleAudioComplete();
+          },
+        );
+
+    // Enable tap subscription
+    await frame!.sendMessage(0x10, TxCode(value: 1).pack());
 
     await frame!.sendMessage(
       0x0a,
@@ -177,10 +235,19 @@ class MainAppState extends State<MainApp>
   @override
   Future<void> onCancel() async {
     await audioClipStreamSubs?.cancel();
+    _recordingTimer?.cancel();
     _pagination.clear();
     _clearTimer?.cancel();
+
+    // Disable tap subscription
+    if (frame != null) {
+      await frame!.sendMessage(0x10, TxCode(value: 0).pack());
+    }
+
     setState(() {
       isConnected = false;
+      _isRecordingAudio = false;
+      _isProcessingImage = false;
     });
   }
 
@@ -188,25 +255,47 @@ class MainAppState extends State<MainApp>
   Future<void> onTap(int taps) async {
     _log.info('Received $taps tap(s)');
 
-    switch (taps) {
-      case 1:
-        await _handleAudioRecording();
-        break;
-      case 2:
-        await _handleImageCapture();
-        break;
-      default:
-        _log.info('Unhandled tap count: $taps');
+    try {
+      switch (taps) {
+        case 1:
+          await _handleAudioRecording();
+          break;
+        case 2:
+          await _handleImageCapture();
+          break;
+        default:
+          _log.info('Unhandled tap count: $taps');
+      }
+    } catch (e) {
+      _log.severe('Error handling tap: $e');
+      await _handleResponseText('Error: $e');
     }
   }
 
   Future<void> _handleAudioRecording() async {
-    if (_isRecordingAudio || _isProcessingImage) return;
+    if (_isProcessingImage) {
+      _log.info('Image processing in progress, ignoring audio request');
+      return;
+    }
 
+    if (_isRecordingAudio) {
+      // Stop recording
+      _log.info('Stopping audio recording');
+      await _stopAudioRecording();
+    } else {
+      // Start recording
+      _log.info('Starting audio recording');
+      await _startAudioRecording();
+    }
+  }
+
+  Future<void> _startAudioRecording() async {
     setState(() {
       _isRecordingAudio = true;
     });
+
     _clearTimer?.cancel();
+    _audioChunks.clear();
 
     await frame!.sendMessage(
       0x0a,
@@ -216,39 +305,114 @@ class MainAppState extends State<MainApp>
       ).pack(),
     );
 
+    // Start audio recording
     await frame!.sendMessage(0x30, TxCode().pack());
 
-    Timer(const Duration(seconds: 10), () async {
+    // Auto-stop after 10 seconds
+    _recordingTimer = Timer(const Duration(seconds: 10), () async {
       if (_isRecordingAudio) {
-        await frame!.sendMessage(0x31, TxCode().pack());
+        _log.info('Auto-stopping recording after 10 seconds');
+        await _stopAudioRecording();
       }
     });
   }
 
-  Future<void> _processAudioData(Uint8List audioData) async {
+  Future<void> _stopAudioRecording() async {
     if (!_isRecordingAudio) return;
+
+    _recordingTimer?.cancel();
+
+    // Send stop message to frame
+    await frame!.sendMessage(0x31, TxCode().pack());
+
+    await frame!.sendMessage(
+      0x0a,
+      TxPlainText(text: '⏹️ Stopping...', paletteOffset: 6).pack(),
+    );
+
+    // Give some time for final audio chunks to arrive
+    await Future.delayed(const Duration(milliseconds: 500));
+
+    // Process collected audio
+    if (_audioChunks.isNotEmpty) {
+      await _processCollectedAudio();
+    } else {
+      _log.warning('No audio chunks collected');
+      await _handleResponseText('No audio recorded. Please try again.');
+    }
 
     setState(() {
       _isRecordingAudio = false;
     });
+  }
 
+  void _handleAudioChunk(Uint8List audioData) {
+    if (_isRecordingAudio) {
+      _audioChunks.add(audioData);
+      _log.info(
+        'Added audio chunk: ${audioData.length} bytes, total chunks: ${_audioChunks.length}',
+      );
+    }
+  }
+
+  void _handleAudioError(dynamic error) {
+    _log.severe('Audio recording error: $error');
+    setState(() {
+      _isRecordingAudio = false;
+    });
+    _recordingTimer?.cancel();
+    _handleResponseText('Audio recording error: $error');
+  }
+
+  void _handleAudioComplete() {
+    _log.info('Audio recording completed');
+    if (_isRecordingAudio) {
+      _processCollectedAudio();
+    }
+  }
+
+  Future<void> _processCollectedAudio() async {
     try {
       await frame!.sendMessage(
         0x0a,
         TxPlainText(text: '🔄 Processing audio...', paletteOffset: 6).pack(),
       );
 
-      final wavData = _convertToWav(audioData);
+      // Combine all audio chunks
+      final totalLength = _audioChunks.fold<int>(
+        0,
+        (sum, chunk) => sum + chunk.length,
+      );
+      final combinedAudio = Uint8List(totalLength);
+      int offset = 0;
+
+      for (final chunk in _audioChunks) {
+        combinedAudio.setRange(offset, offset + chunk.length, chunk);
+        offset += chunk.length;
+      }
+
+      _log.info('Combined audio length: ${combinedAudio.length} bytes');
+
+      if (combinedAudio.isEmpty) {
+        throw Exception('No audio data to process');
+      }
+
+      final wavData = _convertToWav(combinedAudio);
       final response = await processAudio(audioBytes: wavData);
       await _handleResponseText(response);
     } catch (e) {
       _log.severe('Error processing audio: $e');
       await _handleResponseText('Error processing audio: $e');
+    } finally {
+      _audioChunks.clear();
     }
   }
 
   Future<void> _handleImageCapture() async {
-    if (_isProcessingImage || _isRecordingAudio) return;
+    if (_isProcessingImage || _isRecordingAudio) {
+      _log.info('Another operation in progress, ignoring image request');
+      return;
+    }
 
     setState(() {
       _isProcessingImage = true;
@@ -257,7 +421,7 @@ class MainAppState extends State<MainApp>
 
     await frame!.sendMessage(
       0x0a,
-      TxPlainText(text: '📸', paletteOffset: 8).pack(),
+      TxPlainText(text: '📸 Capturing...', paletteOffset: 8).pack(),
     );
 
     try {
@@ -266,6 +430,7 @@ class MainAppState extends State<MainApp>
     } catch (e) {
       _log.severe('Error capturing image: $e');
       await _handleResponseText('Error capturing image: $e');
+    } finally {
       setState(() {
         _isProcessingImage = false;
       });
@@ -281,38 +446,63 @@ class MainAppState extends State<MainApp>
         TxPlainText(text: '🔍 Analyzing image...', paletteOffset: 6).pack(),
       );
 
+      if (imageData.isEmpty) {
+        throw Exception('No image data captured');
+      }
+
+      _log.info('Processing image of size: ${imageData.length} bytes');
       final response = await processImage(imageBytes: imageData);
       await _handleResponseText(response);
     } catch (e) {
       _log.severe('Error processing image: $e');
       await _handleResponseText('Error processing image: $e');
-    } finally {
-      setState(() {
-        _isProcessingImage = false;
-      });
     }
   }
 
   Future<void> _handleResponseText(String text) async {
-    _pagination.clear();
-    for (var line in text.split('\n')) {
-      _pagination.appendLine(line);
+    try {
+      _pagination.clear();
+
+      // Split text into lines and add to pagination
+      final lines = text.split('\n');
+      for (var line in lines) {
+        if (line.trim().isNotEmpty) {
+          _pagination.appendLine(line.trim());
+        }
+      }
+
+      // Display first page
+      final currentPage = _pagination.getCurrentPage();
+      if (currentPage.isNotEmpty) {
+        await frame!.sendMessage(
+          0x0a,
+          TxPlainText(text: currentPage.join('\n')).pack(),
+        );
+      } else {
+        await frame!.sendMessage(
+          0x0a,
+          TxPlainText(text: 'No response received').pack(),
+        );
+      }
+
+      // Auto-clear after 15 seconds
+      _clearTimer?.cancel();
+      _clearTimer = Timer(const Duration(seconds: 15), () async {
+        try {
+          await frame!.sendMessage(
+            0x0a,
+            TxPlainText(
+              text:
+                  '1-Tap: Record Audio\n2-Tap: Take Photo\n_______________\nReady to use!',
+            ).pack(),
+          );
+        } catch (e) {
+          _log.severe('Error clearing display: $e');
+        }
+      });
+    } catch (e) {
+      _log.severe('Error handling response text: $e');
     }
-
-    await frame!.sendMessage(
-      0x0a,
-      TxPlainText(text: _pagination.getCurrentPage().join('\n')).pack(),
-    );
-
-    _clearTimer = Timer(const Duration(seconds: 10), () async {
-      await frame!.sendMessage(
-        0x0a,
-        TxPlainText(
-          text:
-              '1-Tap: Record Audio\n2-Tap: Take Photo\n_______________\nReady to use!',
-        ).pack(),
-      );
-    });
   }
 
   Uint8List _convertToWav(
@@ -321,26 +511,40 @@ class MainAppState extends State<MainApp>
     int channels = 1,
     int bitDepth = 16,
   }) {
-    int dataSize = rawAudio.length;
-    int headerSize = 44;
-    int fileSize = headerSize + dataSize;
+    try {
+      int dataSize = rawAudio.length;
+      int headerSize = 44;
+      int fileSize = headerSize + dataSize - 8;
 
-    final wavData = BytesBuilder();
-    wavData.add(Uint8List.fromList('RIFF'.codeUnits));
-    wavData.add(_intToBytes(fileSize - 8, 4));
-    wavData.add(Uint8List.fromList('WAVE'.codeUnits));
-    wavData.add(Uint8List.fromList('fmt '.codeUnits));
-    wavData.add(_intToBytes(16, 4));
-    wavData.add(_intToBytes(1, 2));
-    wavData.add(_intToBytes(channels, 2));
-    wavData.add(_intToBytes(sampleRate, 4));
-    wavData.add(_intToBytes(sampleRate * channels * (bitDepth ~/ 8), 4));
-    wavData.add(_intToBytes(channels * (bitDepth ~/ 8), 2));
-    wavData.add(_intToBytes(bitDepth, 2));
-    wavData.add(Uint8List.fromList('data'.codeUnits));
-    wavData.add(_intToBytes(dataSize, 4));
-    wavData.add(rawAudio);
-    return wavData.toBytes();
+      final wavData = BytesBuilder();
+
+      // RIFF Header
+      wavData.add(Uint8List.fromList('RIFF'.codeUnits));
+      wavData.add(_intToBytes(fileSize, 4));
+      wavData.add(Uint8List.fromList('WAVE'.codeUnits));
+
+      // Format chunk
+      wavData.add(Uint8List.fromList('fmt '.codeUnits));
+      wavData.add(_intToBytes(16, 4)); // PCM chunk size
+      wavData.add(_intToBytes(1, 2)); // PCM format
+      wavData.add(_intToBytes(channels, 2));
+      wavData.add(_intToBytes(sampleRate, 4));
+      wavData.add(
+        _intToBytes(sampleRate * channels * (bitDepth ~/ 8), 4),
+      ); // Byte rate
+      wavData.add(_intToBytes(channels * (bitDepth ~/ 8), 2)); // Block align
+      wavData.add(_intToBytes(bitDepth, 2));
+
+      // Data chunk
+      wavData.add(Uint8List.fromList('data'.codeUnits));
+      wavData.add(_intToBytes(dataSize, 4));
+      wavData.add(rawAudio);
+
+      return wavData.toBytes();
+    } catch (e) {
+      _log.severe('Error converting to WAV: $e');
+      rethrow;
+    }
   }
 
   Uint8List _intToBytes(int value, int length) {
@@ -352,7 +556,14 @@ class MainAppState extends State<MainApp>
   }
 
   Future<void> logout() async {
-    Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
+    try {
+      await onCancel();
+      if (mounted) {
+        Navigator.pushNamedAndRemoveUntil(context, '/', (_) => false);
+      }
+    } catch (e) {
+      _log.severe('Error during logout: $e');
+    }
   }
 
   @override
@@ -422,7 +633,13 @@ class MainAppState extends State<MainApp>
               ),
               const SizedBox(height: 20),
               Text(
-                isConnected ? 'Connected to Frame' : 'Tap to connect',
+                isConnected
+                    ? (_isRecordingAudio
+                        ? 'Recording Audio...'
+                        : _isProcessingImage
+                        ? 'Processing Image...'
+                        : 'Connected to Frame')
+                    : 'Tap to connect',
                 style: const TextStyle(
                   color: Colors.white70,
                   fontSize: 18,
