@@ -79,33 +79,71 @@ class _CreateNewPasswordPageState extends State<CreateNewPasswordPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF000E1A),
-      appBar: AppBar(title: const Text('Create New Password')),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF000E1A),
+        elevation: 0,
+        title: const Text('Create New Password'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextField(
               controller: passwordController,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'New Password'),
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'New Password',
+                labelStyle: const TextStyle(color: Colors.white70),
+                filled: true,
+                fillColor: Colors.white10,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
             const SizedBox(height: 15),
             TextField(
               controller: confirmPasswordController,
               obscureText: true,
-              decoration: const InputDecoration(
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
                 labelText: 'Confirm New Password',
+                labelStyle: const TextStyle(color: Colors.white70),
+                filled: true,
+                fillColor: Colors.white10,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
               ),
             ),
             const SizedBox(height: 20),
             if (errorMessage.isNotEmpty)
-              Text(errorMessage, style: const TextStyle(color: Colors.red)),
-            ElevatedButton(
-              onPressed: isLoading ? null : resetPassword,
-              child:
-                  isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Reset Password'),
+              Text(
+                errorMessage,
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: isLoading ? null : resetPassword,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF34C6F4),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child:
+                    isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text('Reset Password'),
+              ),
             ),
           ],
         ),

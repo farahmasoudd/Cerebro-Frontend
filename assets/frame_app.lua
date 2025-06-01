@@ -67,9 +67,6 @@ function app_loop()
     local streaming = false
     local audio_data = ''
     local mtu = frame.bluetooth.max_length()
-    local audio_timeout = 0
-    local max_audio_timeout = 300 -- 30 seconds at 0.1s intervals
-    
     -- data buffer needs to be even for reading from microphone
     if mtu % 2 == 1 then mtu = mtu - 1 end
 
@@ -118,7 +115,6 @@ function app_loop()
 
                     -- Handle text display
                     if (data.app_data[TEXT_MSG] ~= nil and data.app_data[TEXT_MSG].string ~= nil) then
-                        clear_display()
                         print_text()
                         frame.display.show()
                         data.app_data[TEXT_MSG] = nil
@@ -141,83 +137,40 @@ function app_loop()
                     -- Handle audio recording start
                     if (data.app_data[START_AUDIO_MSG] ~= nil) then
                         audio_data = ''
-                        audio_timeout = 0
-                        rc_mic, err_mic = pcall(frame.microphone.start, {sample_rate=8000, bit_depth=16})
-                        if rc_mic then
-                            streaming = true
-                            frame.display.text("🎤 Recording", 1, 1)
-                            frame.display.show()
-                            print('Audio recording started')
-                        else
-                            print('Failed to start microphone: ' .. tostring(err_mic))
-                            frame.display.text("Mic Error", 1, 1)
-                            frame.display.show()
-                        end
+                        pcall(frame.microphone.start, {sample_rate=8000, bit_depth=16})
+                        streaming = true
+                        frame.display.text("🎤 Recording", 1, 1)
+                        frame.display.show()
                         data.app_data[START_AUDIO_MSG] = nil
                     end
 
                     -- Handle audio recording stop
                     if (data.app_data[STOP_AUDIO_MSG] ~= nil) then
-                        if streaming then
-                            pcall(frame.microphone.stop)
-                            streaming = false
-                            audio_timeout = 0
-                            print('Audio recording stopped manually')
-                            -- Send final message
-                            pcall(frame.bluetooth.send, string.char(AUDIO_DATA_FINAL_MSG))
-                        end
+                        pcall(frame.microphone.stop)
+                        streaming = false
                         clear_display()
                         data.app_data[STOP_AUDIO_MSG] = nil
                     end
 
                 end
 
-                -- Handle audio streaming with improved error handling
-                if streaming then
-                    audio_timeout = audio_timeout + 1
-                    
-                    -- Timeout check
-                    if audio_timeout > max_audio_timeout then
-                        print('Audio recording timeout')
-                        pcall(frame.microphone.stop)
-                        streaming = false
-                        audio_timeout = 0
-                        pcall(frame.bluetooth.send, string.char(AUDIO_DATA_FINAL_MSG))
-                        clear_display()
-                    else
-                        -- Process audio data with error handling
-                        for i=1,5 do  -- Reduced from 20 to 5 for better stability
-                            if not streaming then break end
-                            
-                            local success, result = pcall(frame.microphone.read, mtu)
-                            if success and result then
-                                if result == '' then
-                                    -- No data available, continue
-                                    break
-                                else
-                                    audio_data = result
-                                    -- Send the data
-                                    local send_success = pcall(frame.bluetooth.send, string.char(AUDIO_DATA_NON_FINAL_MSG) .. audio_data)
-                                    if not send_success then
-                                        print('Failed to send audio data')
-                                    end
-                                    frame.sleep(0.0025)
-                                end
-                            elseif success and result == nil then
-                                -- Microphone stopped, end streaming
-                                pcall(frame.bluetooth.send, string.char(AUDIO_DATA_FINAL_MSG))
-                                streaming = false
-                                audio_timeout = 0
-                                break
-                            else
-                                -- Error reading from microphone
-                                print('Error reading microphone data')
-                                pcall(frame.microphone.stop)
-                                streaming = false
-                                audio_timeout = 0
-                                pcall(frame.bluetooth.send, string.char(AUDIO_DATA_FINAL_MSG))
-                                break
-                            end
+                -- Handle audio streaming (prioritize audio processing)
+                for i=1,20 do
+                    if streaming then
+                        audio_data = frame.microphone.read(mtu)
+
+                        -- Calling frame.microphone.stop() will allow this to break the loop
+                        if audio_data == nil then
+                            -- send an end-of-stream message back to the phone
+                            pcall(frame.bluetooth.send, string.char(AUDIO_DATA_FINAL_MSG))
+                            frame.sleep(0.0025)
+                            streaming = false
+                            break
+
+                        -- send the data that was read
+                        elseif audio_data ~= '' then
+                            pcall(frame.bluetooth.send, string.char(AUDIO_DATA_NON_FINAL_MSG) .. audio_data)
+                            frame.sleep(0.0025)
                         end
                     end
                 end
@@ -233,8 +186,6 @@ function app_loop()
                 -- Sleep less when streaming audio for better responsiveness
                 if not streaming then 
                     frame.sleep(0.1) 
-                else
-                    frame.sleep(0.02)  -- Shorter sleep when streaming
                 end
             end
         )
@@ -242,12 +193,7 @@ function app_loop()
         -- Catch the break signal here and clean up the display
         if rc == false then
             -- send the error back on the stdout stream
-            print('Main loop error: ' .. tostring(err))
-            -- Clean up streaming state
-            if streaming then
-                pcall(frame.microphone.stop)
-                pcall(frame.bluetooth.send, string.char(AUDIO_DATA_FINAL_MSG))
-            end
+            print(err)
             frame.display.text(" ", 1, 1)
             frame.display.show()
             frame.sleep(0.04)

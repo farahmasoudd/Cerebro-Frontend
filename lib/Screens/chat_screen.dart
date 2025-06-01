@@ -163,7 +163,7 @@ class _ChatScreenState extends State<ChatScreen> {
         margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: isUser ? const Color(0xFF008CFF) : Colors.white10,
+          color: isUser ? const Color(0xFF34C6F4) : Colors.white10,
           borderRadius: BorderRadius.circular(14),
         ),
         child: Column(
@@ -192,16 +192,17 @@ class _ChatScreenState extends State<ChatScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFF000E1A),
       appBar: AppBar(
-        backgroundColor: const Color(0xFF008CFF),
+        backgroundColor: const Color(0xFF0A192D),
+        elevation: 0,
         title: const Text("Chat"),
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF34C6F4)),
           onPressed: () => Navigator.pop(context),
         ),
         actions: const [
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
-            child: Icon(Icons.chat_bubble_outline),
+            child: Icon(Icons.chat_bubble_outline, color: Color(0xFF34C6F4)),
           ),
         ],
       ),
@@ -290,7 +291,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(width: 4),
                 IconButton(
-                  icon: const Icon(Icons.send, color: Color(0xFF008CFF)),
+                  icon: const Icon(Icons.send, color: Color(0xFF34C6F4)),
                   onPressed: _sendMessage,
                 ),
               ],

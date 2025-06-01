@@ -57,7 +57,7 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
     try {
-      final uri = Uri.parse('172.20.10.8:8000/register');
+      final uri = Uri.parse('http://172.20.10.8:8000/register');
       final response = await http.post(
         uri,
         headers: {'Content-Type': 'application/json'},
@@ -93,6 +93,7 @@ class _RegisterPageState extends State<RegisterPage> {
       backgroundColor: const Color(0xFF000E1A),
       appBar: AppBar(
         backgroundColor: const Color(0xFF000E1A),
+        elevation: 0,
         title: const Text('Register'),
       ),
       body: Padding(
@@ -102,24 +103,50 @@ class _RegisterPageState extends State<RegisterPage> {
             children: [
               TextField(
                 controller: nameController,
-                decoration: const InputDecoration(labelText: 'Full Name'),
+                style: const TextStyle(color: Colors.white),
+                decoration: InputDecoration(
+                  labelText: 'Full Name',
+                  labelStyle: const TextStyle(color: Colors.white70),
+                  filled: true,
+                  fillColor: Colors.white10,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
               ),
               const SizedBox(height: 15),
               TextField(
                 controller: emailController,
+                style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   labelText: 'Email',
+                  labelStyle: const TextStyle(color: Colors.white70),
                   errorText: emailFeedback.isNotEmpty ? emailFeedback : null,
+                  filled: true,
+                  fillColor: Colors.white10,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
               ),
               const SizedBox(height: 15),
               TextField(
                 controller: passwordController,
                 obscureText: hidePassword,
+                style: const TextStyle(color: Colors.white),
                 decoration: InputDecoration(
                   labelText: 'Password',
+                  labelStyle: const TextStyle(color: Colors.white70),
                   errorText:
                       passwordFeedback.isNotEmpty ? passwordFeedback : null,
+                  filled: true,
+                  fillColor: Colors.white10,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                   suffixIcon: IconButton(
                     icon: Icon(
                       hidePassword ? Icons.visibility_off : Icons.visibility,
@@ -144,6 +171,13 @@ class _RegisterPageState extends State<RegisterPage> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF34C6F4),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
                   onPressed: isLoading ? null : register,
                   child:
                       isLoading

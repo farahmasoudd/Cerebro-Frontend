@@ -23,7 +23,7 @@ class MyApp extends StatelessWidget {
       title: 'Cerebro',
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF000E1A),
+        scaffoldBackgroundColor: Colors.transparent,
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white10,
@@ -32,7 +32,7 @@ class MyApp extends StatelessWidget {
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF008CFF),
+            backgroundColor: const Color(0xFF34C6F4),
             foregroundColor: Colors.white,
           ),
         ),
@@ -113,62 +113,146 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  void showInstructionsDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            backgroundColor: const Color(0xFF000E1A),
+            title: const Text(
+              'How to Use Cerebro',
+              style: TextStyle(
+                color: Color(0xFF34C6F4),
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: const SingleChildScrollView(
+              child: Text('''
+0- Create an account
+1- Login to your account
+2- Allow any permissions requested by the app
+3- Remove the already charged glasses from the charging cradle
+4- Put a nose piece with the right fitting for you, then wear the glasses
+5- A popup will appear prompting you to pair to the glasses, click on pair
+6- Click on the connect round button in the middle of the screen
+7- Wait for the application to load onto the frame
+8- Gently tap once on the right-hand side of Cerebro glasses for audio query
+9- Double tap the same spot for an image query
+10- Alternatively, you could click on the chat button on the top right corner to access the system without Cerebro
+
+Note: Ensure Bluetooth and Internet are enabled.
+            ''', style: TextStyle(color: Colors.white70, height: 1.5)),
+            ),
+            actions: [
+              TextButton(
+                child: Text(
+                  'Close',
+                  style: TextStyle(color: Color(0xFF34C6F4)),
+                ),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF000E1A),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+      body: Container(
+        decoration: const BoxDecoration(
+          image: DecorationImage(
+            image: AssetImage('assets/images/bg_texture.png'),
+            fit: BoxFit.cover,
+            opacity: 0.8, // adjust for softness
+          ),
+        ),
+        child: Stack(
           children: [
-            const Text(
-              'Cerebro',
-              style: TextStyle(
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF008CFF),
-              ),
-            ),
-            const SizedBox(height: 30),
-            TextField(
-              controller: emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
-            ),
-            const SizedBox(height: 15),
-            TextField(
-              controller: passwordController,
-              obscureText: hidePassword,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    hidePassword ? Icons.visibility_off : Icons.visibility,
-                  ),
-                  onPressed: () => setState(() => hidePassword = !hidePassword),
+            Center(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      height: 170,
+                      width: 170,
+                      clipBehavior: Clip.hardEdge,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    TextField(
+                      controller: emailController,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: passwordController,
+                      obscureText: hidePassword,
+                      decoration: InputDecoration(
+                        labelText: 'Password',
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            hidePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                          ),
+                          onPressed:
+                              () =>
+                                  setState(() => hidePassword = !hidePassword),
+                        ),
+                      ),
+                    ),
+                    if (errorMessage.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0),
+                        child: Text(
+                          errorMessage,
+                          style: const TextStyle(color: Colors.redAccent),
+                        ),
+                      ),
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: login,
+                      child: const Text('Log in'),
+                    ),
+                    const SizedBox(height: 14),
+                    TextButton(
+                      onPressed:
+                          () => Navigator.pushNamed(context, '/register'),
+                      child: const Text('Create a new account'),
+                    ),
+                    TextButton(
+                      onPressed:
+                          () =>
+                              Navigator.pushNamed(context, '/forgot-password'),
+                      child: const Text(
+                        'Forgot Password?',
+                        style: TextStyle(decoration: TextDecoration.underline),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            if (errorMessage.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: Text(
-                  errorMessage,
-                  style: const TextStyle(color: Colors.redAccent),
+            Positioned(
+              bottom: 16,
+              left: 16,
+              child: IconButton(
+                icon: const Icon(
+                  Icons.info_outline,
+                  size: 36,
+                  color: Color(0xFF34C6F4),
                 ),
-              ),
-            const SizedBox(height: 25),
-            ElevatedButton(onPressed: login, child: const Text('Log in')),
-            const SizedBox(height: 16),
-            TextButton(
-              onPressed: () => Navigator.pushNamed(context, '/register'),
-              child: const Text('Create a new account'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pushNamed(context, '/forgot-password'),
-              child: const Text(
-                'Forgot Password?',
-                style: TextStyle(decoration: TextDecoration.underline),
+                tooltip: 'Instructions',
+                onPressed: showInstructionsDialog,
               ),
             ),
           ],

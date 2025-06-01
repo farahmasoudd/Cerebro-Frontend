@@ -34,26 +34,66 @@ class _VerifyResetCodePageState extends State<VerifyResetCodePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF000E1A),
-      appBar: AppBar(title: const Text('Enter Reset Code')),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF000E1A),
+        elevation: 0,
+        title: const Text('Enter Reset Code'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextField(
               controller: emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Email',
+                labelStyle: const TextStyle(color: Colors.white70),
+                filled: true,
+                fillColor: Colors.white10,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
             const SizedBox(height: 15),
             TextField(
               controller: codeController,
-              decoration: const InputDecoration(labelText: 'Reset Code'),
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Reset Code',
+                labelStyle: const TextStyle(color: Colors.white70),
+                filled: true,
+                fillColor: Colors.white10,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
             const SizedBox(height: 20),
             if (errorMessage.isNotEmpty)
-              Text(errorMessage, style: const TextStyle(color: Colors.red)),
-            ElevatedButton(
-              onPressed: submitCode,
-              child: const Text('Continue'),
+              Text(
+                errorMessage,
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: submitCode,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF34C6F4),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Continue'),
+              ),
             ),
           ],
         ),

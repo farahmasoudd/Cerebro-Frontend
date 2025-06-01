@@ -55,30 +55,69 @@ class _VerifyAccountPageState extends State<VerifyAccountPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFF000E1A),
-      appBar: AppBar(title: const Text('Verify Email')),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFF000E1A),
+        title: const Text('Verify Email'),
+        elevation: 0,
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             TextField(
               controller: emailController,
-              decoration: const InputDecoration(labelText: 'Email'),
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Email',
+                labelStyle: const TextStyle(color: Colors.white70),
+                filled: true,
+                fillColor: Colors.white10,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
             const SizedBox(height: 15),
             TextField(
               controller: codeController,
-              decoration: const InputDecoration(labelText: 'Verification Code'),
+              style: const TextStyle(color: Colors.white),
+              decoration: InputDecoration(
+                labelText: 'Verification Code',
+                labelStyle: const TextStyle(color: Colors.white70),
+                filled: true,
+                fillColor: Colors.white10,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  borderSide: BorderSide.none,
+                ),
+              ),
             ),
             const SizedBox(height: 20),
             if (errorMessage.isNotEmpty)
-              Text(errorMessage, style: const TextStyle(color: Colors.red)),
-            const SizedBox(height: 10),
-            ElevatedButton(
-              onPressed: isLoading ? null : verifyAccount,
-              child:
-                  isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text('Verify Account'),
+              Text(
+                errorMessage,
+                style: const TextStyle(color: Colors.redAccent),
+              ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: isLoading ? null : verifyAccount,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF34C6F4),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child:
+                    isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text('Verify Account'),
+              ),
             ),
           ],
         ),

@@ -85,3 +85,5 @@ flutter:
     - packages/frame_msg/lua/data.min.lua
     - packages/frame_msg/lua/plain_text.min.lua
     - assets/frame_app.lua
+    - assets/images/logo.png
+    - assets/images/bg_texture.png
