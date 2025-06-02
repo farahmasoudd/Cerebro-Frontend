@@ -24,7 +24,7 @@ class _VerifyAccountPageState extends State<VerifyAccountPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('$url/verify'),
+        Uri.parse('http://192.168.1.107/verify'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': emailController.text.trim(),
