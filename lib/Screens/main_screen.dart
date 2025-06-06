@@ -26,7 +26,7 @@ class MainApp extends StatefulWidget {
 
 class MainAppState extends State<MainApp>
     with SimpleFrameAppState, FrameVisionAppState {
-  static const String _apiEndpoint = 'http://192.168.1.107:8000';
+  static const String _apiEndpoint = 'http://192.168.1.158:8000';
 
   // Audio Recording State
   StreamSubscription<Uint8List>? audioClipStreamSubs;
@@ -116,12 +116,28 @@ class MainAppState extends State<MainApp>
       _lastError = null;
     });
 
-    await audioClipStreamSubs?.cancel();
-    audioClipStreamSubs = RxAudio()
+    // Enable tap subscription
+    await frame!.sendMessage(0x10, TxCode(value: 1).pack());
+
+    await frame!.sendMessage(
+      0x0a,
+      TxPlainText(
+        text:
+            '1-Tap: Record Audio\n2-Tap: Take Photo\n_______________\nReady to use!',
+      ).pack(),
+    );
+  }
+
+  void _setupAudioStream() {
+    // Cancel existing subscription if any
+    audioClipStreamSubs?.cancel();
+
+    // Setup new audio stream with streaming: true
+    audioClipStreamSubs = RxAudio(streaming: true)
         .attach(frame!.dataResponse)
         .listen(
           (audioData) {
-            _log.info('Audio clip received: ${audioData.length} bytes');
+            _log.info('Audio chunk received: ${audioData.length} bytes');
             _handleAudioChunk(audioData);
           },
           onError: (error) {
@@ -133,17 +149,6 @@ class MainAppState extends State<MainApp>
             _handleAudioStreamComplete();
           },
         );
-
-    // Enable tap subscription
-    await frame!.sendMessage(0x10, TxCode(value: 1).pack());
-
-    await frame!.sendMessage(
-      0x0a,
-      TxPlainText(
-        text:
-            '1-Tap: Record Audio\n2-Tap: Take Photo\n_______________\nReady to use!',
-      ).pack(),
-    );
   }
 
   @override
@@ -220,6 +225,9 @@ class MainAppState extends State<MainApp>
 
       _cleanupTimers();
       _audioChunks.clear();
+
+      // Setup audio stream right before starting recording
+      _setupAudioStream();
 
       await frame!.sendMessage(
         0x0a,
@@ -669,8 +677,6 @@ class MainAppState extends State<MainApp>
 
   @override
   Widget build(BuildContext context) {
-    // START OF FILE
-
     return MaterialApp(
       title: 'Frame Multi-Modal Assistant',
       theme: ThemeData.dark(
@@ -862,7 +868,5 @@ class MainAppState extends State<MainApp>
         ),
       ),
     );
-
-    // END OF FILE
   }
 }
