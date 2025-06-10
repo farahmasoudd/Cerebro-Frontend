@@ -84,7 +84,7 @@ class _LoginPageState extends State<LoginPage> {
       return;
     }
 
-    final uri = Uri.parse('http://192.168.1.158:8000/login');
+    final uri = Uri.parse('http://192.168.1.218:8000/login');
     try {
       final response = await http.post(
         uri,

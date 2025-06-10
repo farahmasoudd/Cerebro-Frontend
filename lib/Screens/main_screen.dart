@@ -26,7 +26,7 @@ class MainApp extends StatefulWidget {
 
 class MainAppState extends State<MainApp>
     with SimpleFrameAppState, FrameVisionAppState {
-  static const String _apiEndpoint = 'http://192.168.1.158:8000';
+  static const String _apiEndpoint = 'http://192.168.1.218:8000';
 
   // Audio Recording State
   StreamSubscription<Uint8List>? audioClipStreamSubs;
@@ -678,7 +678,7 @@ class MainAppState extends State<MainApp>
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Frame Multi-Modal Assistant',
+      title: 'Cerebro',
       theme: ThemeData.dark(
         useMaterial3: true,
       ).copyWith(scaffoldBackgroundColor: const Color(0xFF000E1A)),
