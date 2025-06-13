@@ -26,7 +26,7 @@ class MainApp extends StatefulWidget {
 
 class MainAppState extends State<MainApp>
     with SimpleFrameAppState, FrameVisionAppState {
-  static const String _apiEndpoint = 'http://192.168.1.218:8000';
+  static const String _apiEndpoint = 'http://192.168.1.107:8000';
 
   // Audio Recording State
   StreamSubscription<Uint8List>? audioClipStreamSubs;
@@ -442,14 +442,13 @@ class MainAppState extends State<MainApp>
       }
 
       final jsonResponse = json.decode(response.body);
-      final transcription = jsonResponse['transcription'] ?? '';
       final aiResponse = jsonResponse['response'] ?? '';
 
-      if (transcription.isEmpty && aiResponse.isEmpty) {
+      if (aiResponse.isEmpty) {
         throw Exception('No response received from server');
       }
 
-      return 'Transcription: $transcription\n\nResponse: $aiResponse';
+      return 'Response: $aiResponse';
     } catch (e) {
       _log.severe('Error in processAudio: $e');
       rethrow;

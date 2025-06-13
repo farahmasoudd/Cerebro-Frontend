@@ -41,7 +41,7 @@ class _CreateNewPasswordPageState extends State<CreateNewPasswordPage> {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.218/reset-password'),
+        Uri.parse('http://192.168.1.107/reset-password'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           "email": widget.email,
